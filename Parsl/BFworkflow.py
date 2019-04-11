@@ -16,6 +16,9 @@ from parsl.launchers  import  SingleNodeLauncher
 from parsl.executors  import  HighThroughputExecutor
 from parsl.config     import  Config
 
+#iiiiii
+#wwwwww
+
 
 ## New Parsl monitoring (since v0.7.2)
 from parsl.monitoring.monitoring import MonitoringHub
@@ -81,6 +84,7 @@ config = Config(
                 init_blocks=0,
                 min_blocks=1,                  # limits on batch job requests
                 max_blocks=1,
+                parallelism=0.1,            # reduce "extra" batch jobs
                 scheduler_options="#SBATCH -L SCRATCH,projecta \n#SBATCH --constraint=haswell",
                 worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
                 channel=LocalChannel(),    # batch communication is performed on this local machine
@@ -162,8 +166,15 @@ print("dir(jobsk[0]) = ",dir(jobsk[0]))
 ## Wait for jobs to complete
 
 print("Begin waiting for defined tasks to complete...")
-parsl.wait_for_current_tasks()
+try:
+    parsl.wait_for_current_tasks()
+except:         # Unhandled exception will cause script to abort
+    print("Exception!  parsl.wait_for_current_tasks()")
+pass
 
+
+print("Check return code for each task")
+### Can the .result() function also cause an exception???
 for job in jobsk:
     print("rc = ",job.result())
     pass
