@@ -1,11 +1,11 @@
 # genBrighterFatter
 Workflow to generate LSST brighter-fatter kernels
 
-PARSL
+## PARSL version
 
 The current design of the Parsl prototype task is as follows:
-----------
 
+```
 runInit.sh                  - driver to set up environment and run the 
    |                                repository initialization
    |
@@ -33,12 +33,12 @@ runWorkflow.sh	   - driver to establish environment and run the BF kernel
 		    |	       +- makeBrighterFatterKernel.py  - DM code
 		    |
 		    +- <Parsl distributes processing per "Config">
-
+```
 ---------------------------------------------------------------------------------------------------------
 
-The directory structure looks like this, after two attempts to run the
-top-level workflow script:
+The directory structure looks like this, after two "runs" of the top-level workflow script:
 
+```
 .
 |-- BFworkflow.py                                         
 |-- README.txt                                            
@@ -74,3 +74,4 @@ top-level workflow script:
 |           `-- parsl.auto.1554163736.7880213.submit.stdout
 |-- stderr.log
 `-- stdout.log
+```
