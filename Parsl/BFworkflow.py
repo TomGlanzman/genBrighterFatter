@@ -16,14 +16,15 @@ from parsl.launchers  import  SingleNodeLauncher
 from parsl.executors  import  HighThroughputExecutor
 from parsl.config     import  Config
 
-#iiiiii
-#wwwwww
-
-
 ## New Parsl monitoring (since v0.7.2)
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.addresses import address_by_hostname
 import logging
+
+## Parsl checkpointing
+
+
+
 
 print("parsl version = ",parsl.__version__)
 
@@ -49,6 +50,10 @@ workflowRoot = os.environ['PT_WORKFLOWROOT']
 hostName = os.environ['HOSTNAME']
 
 config = Config(
+    app_cache=True, 
+    checkpoint_files=None, 
+    checkpoint_mode='dfk_exit', 
+    checkpoint_period=None, 
     executors=[
         HighThroughputExecutor(
             label='cori-1',
@@ -64,6 +69,7 @@ config = Config(
                 init_blocks=int(os.environ['PT_INITJOBS']),
                 min_blocks=int(os.environ['PT_MINJOBS']),       # limits on batch job requests
                 max_blocks=int(os.environ['PT_MAXJOBS']),
+                parallelism=0.1,            # reduce "extra" batch jobs
                 scheduler_options=os.environ['PT_BATCHOPTS'],
                 worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
                 channel=LocalChannel(),    # batch communication is performed on this local machine
@@ -169,18 +175,29 @@ print("Begin waiting for defined tasks to complete...")
 try:
     parsl.wait_for_current_tasks()
 except:         # Unhandled exception will cause script to abort
-    print("Exception!  parsl.wait_for_current_tasks()")
+    print("Exception!  parsl.wait_for_current_tasks()   Bah!")
 pass
 
 
 print("Check return code for each task")
 ### Can the .result() function also cause an exception???
-for job in jobsk:
-    print("rc = ",job.result())
+jobn = 0
+try:
+    for job in jobsh:
+        print("waiting for Haswell job ",jobn)
+        print("rc = ",job.result())
+        jobn += 1
+        pass
+    for job in jobsk:
+        print("waiting for KNL job ",jobn)
+        print("rc = ",job.result())
+        jobn += 1
+        pass
+except:
+    print("Exception waiting for job ",jobn)
     pass
-for job in jobsh:
-    print("rc = ",job.result())
-    pass
+
+
 
 ## Final bookkeeping
 endTime = datetime.datetime.now()
