@@ -88,13 +88,13 @@ export PT_ENVSETUP="source ${PT_WORKFLOWROOT}/configTask.sh;export PATH="'${PATH
 ##                  NOTE the peculiar way to include a NEWLINE character...
 export PT_BATCHOPTS="#SBATCH -L SCRATCH,projecta "$'\n'"#SBATCH --constraint=${PT_HOSTTYPE}"
 
-##     PT_WALLTIME time limit for SLURM jobs
-export PT_WALLTIME='00:30:00'
-#export PT_WALLTIME='02:00:00'
-
 ##     PT_QUEUE is the SLURM batch queue
 export PT_QUEUE='debug'
 #export PT_QUEUE='regular'
+
+##     PT_WALLTIME time limit for SLURM jobs
+export PT_WALLTIME='00:30:00'
+#export PT_WALLTIME='02:00:00'
 
 ##     PT_JOBSPERNODE is the number of user job steps to run on a single Cori node
 export PT_JOBSPERNODE=2

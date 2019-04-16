@@ -80,7 +80,7 @@ config = Config(
             label='cori-2',
             address=hostName,   # node upon which the top-level parsl script is running
             cores_per_worker=2,   # threads per user job
-            max_workers=2,           # user jobs/node
+            max_workers=4,           # user jobs/node
             poll_period=30,
             provider=SlurmProvider(
                 partition='debug',               # SLURM job "queue"
@@ -147,25 +147,30 @@ for sensor in sensorList:
     print('cmd = ',cmd)
     stdo = 'Kernel'+str(njobs)+'.log'
     stde = 'KernelErr'+str(njobs)+'.log'
-    if njobs < 3:
+    if njobs < 0:
+        print("Creating KNL task ",njobs-1)
         jobsk.append(genBFk(cmd,stdout=stdo,stderr=stde))
     else:
+        print("Creating Haswell task ",njobs-1)
         jobsh.append(genBFh(cmd,stdout=stdo,stderr=stde))
         pass
     pass
-print(" Number of parsl tasks created = ",njobs)
+print(" Total number of parsl tasks created = ",njobs)
 
 
 
 
 ## Introspect the parsl tasks
-print("Workflow info:")
-print("type(parsl) = ",type(parsl))
-print("dir(parsl) = ",dir(parsl))
+#print("Workflow info:")
+#print("type(parsl) = ",type(parsl))
+#print("dir(parsl) = ",dir(parsl))
 
-print("type(jobsk[0]) = ",type(jobsk[0]))
-print("dir(jobsk[0]) = ",dir(jobsk[0]))
+#print("type(jobsk[0]) = ",type(jobsk[0]))
+#print("dir(jobsk[0]) = ",dir(jobsk[0]))
 
+
+## Uncomment the assert if running with "python -i"
+#assert False,"Entering python interpreter"
 
 
 

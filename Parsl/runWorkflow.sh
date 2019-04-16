@@ -5,6 +5,9 @@
 ## This script is intended to be run interactively, ideally from the
 ## workflow main directory.
 
+## NOTE: if invoked with a single parameter, "int", then python will
+## exit into an interpreter.  This assumes an "assert" is present in
+## BFworkflow.py.
 
 ## Define root workflow directory
 ##   Note: this will assume this script resides in the top-level task directory
@@ -24,4 +27,8 @@ source $workflowroot/cvmfsSetup.sh
 
 ## Run the workflow
 echo "python workflowroot/BFworkflow.py"
-python $workflowroot/BFworkflow.py
+if [ "$1" == "int" ]; then
+    python -i $workflowroot/BFworkflow.py
+else
+    python $workflowroot/BFworkflow.py
+fi
