@@ -9,7 +9,7 @@ if [ -z "$SLURMD_NODENAME" ]
 then
     echo `date`"  Entering genBFkernel.sh, running on "${SLURMD_NODENAME}
 else
-    echo `date`"  Entering genBFkernel.sh, running on "${HOST}
+    echo `date`"  Entering genBFkernel.sh, running on "${HOSTNAME}
 fi
 
 
@@ -19,14 +19,12 @@ endDet=$2         # last detector number
 dir=$3            # name for /rerun subdirectory
 nPar=$4           # number of parallel processes ('-j' option)
 
+echo $0 $1 $2 $3 $4
+echo "startDet "$1
+echo "endDet  "$2
+echo "dir          "$3
+echo "nPar       "$4
 
-##### Define the inputs needed by BF kernel generation
-DESCDM_PREFIX=/global/cscratch1/sd/descdm/DC2/Run2.1i
-BF_FLAT_DATA_DIR=${DESCDM_PREFIX}/calibration/bf_flats
-CALIB_DIR=${DESCDM_PREFIX}/calib_repo
-
-##### Define output repository
-LSSTCAM_REPO_DIR=$SCRATCH/tomTest/bf_repo2
 PWDSAVE=$PWD
 
 ######################################
@@ -49,7 +47,7 @@ echo "[makeBrighterFatterKernel.py]"
 ## set "doCalcGains=False" to use bf gains stored in <repo>/calibrations
 
 set -x
-${Tprefix} python3 ${BFprefix}/makeBrighterFatterKernel.py "${LSSTCAM_REPO_DIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${visitPairs} -c xcorrCheckRejectLevel=2 doCalcGains=False isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True buildCorrelationModel=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
+${Tprefix} python3 ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${visitPairs} -c xcorrCheckRejectLevel=2 doCalcGains=False isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True buildCorrelationModel=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
 rc=$?
 set +x
 echo "[rc = "$rc"]"

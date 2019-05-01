@@ -18,7 +18,7 @@ if [ ! -d ${PT_REPODIR} ]; then
     echo "lsst.obs.lsst.imsim.ImsimMapper" > ${PT_REPODIR}/_mapper
 
     echo `date` " [ingestImages.py flats]"
-    ingestImages.py "${PT_REPODIR}" "${BF_FLAT_DATA_DIR}"/lsst_a_*.fits --mode=link
+    ingestImages.py "${PT_REPODIR}" "${PT_BF_FLAT_DIR}"/lsst_a_*.fits --mode=link
     echo "[rc = "$?"]"
 
 

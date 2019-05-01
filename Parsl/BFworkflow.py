@@ -11,8 +11,10 @@ print(startTime, ": Entering BFworkflow.py")
 import parsl
 from parsl.app.app    import  python_app, bash_app
 from parsl.providers  import  SlurmProvider
+from parsl.providers  import  LocalProvider
 from parsl.channels   import  LocalChannel
 from parsl.launchers  import  SingleNodeLauncher
+from parsl.launchers  import  SrunLauncher
 from parsl.executors  import  HighThroughputExecutor
 from parsl.config     import  Config
 
@@ -22,8 +24,7 @@ from parsl.addresses import address_by_hostname
 import logging
 
 ## Parsl checkpointing
-
-
+## (Not yet...)
 
 
 print("parsl version = ",parsl.__version__)
@@ -47,7 +48,17 @@ workflowRoot = os.environ['PT_WORKFLOWROOT']
 
 ##
 ## Configure Parsl execution of the BF kernel generation step
-hostName = os.environ['HOSTNAME']
+
+if 'SLURMD_NODENAME' in os.environ:
+    hostName = os.environ['SLURMD_NODENAME']
+else:
+    hostName = os.environ['HOSTNAME']
+    pass
+print('Running on node determined by me: ',hostName)
+
+hostName = address_by_hostname()
+print('Running on node determined by parsl: ',hostName)
+
 
 config = Config(
     app_cache=True, 
@@ -56,45 +67,38 @@ config = Config(
     checkpoint_period=None, 
     executors=[
         HighThroughputExecutor(
-            label='cori-1',
-            address=hostName,   # node upon which the top-level parsl script is running
-            cores_per_worker=os.environ['PT_CORESPERSTEP'],     # Single-threaded
-            max_workers=int(os.environ['PT_JOBSPERNODE']),           # user jobs/node
+            label='coriH',
+            address=hostName,         # node upon which the top-level parsl script is running
+            cores_per_worker=1,        # threads per user job
+            max_workers=40,            # user tasks/node
             poll_period=30,
-            provider=SlurmProvider(
-                partition=os.environ['PT_QUEUE'],               # SLURM job "queue"
-                walltime=os.environ['PT_WALLTIME'],
+            provider=SlurmProvider(          # Dispatch tasks via SLURM
+                partition='regular',               # SLURM job "queue"
+                walltime='04:00:00',
                 cmd_timeout=90,                # Extend time waited in response to 'sbatch' command
-                nodes_per_block=int(os.environ['PT_NODESPERJOB']),   # Nodes per batch job
-                init_blocks=int(os.environ['PT_INITJOBS']),
-                min_blocks=int(os.environ['PT_MINJOBS']),       # limits on batch job requests
-                max_blocks=int(os.environ['PT_MAXJOBS']),
+                nodes_per_block=1,      # Nodes per batch job
+                init_blocks=0,                # of batch jobs to submit in anticipation of future demand
+                min_blocks=1,               # limits on batch job requests
+                max_blocks=5,
                 parallelism=0.1,            # reduce "extra" batch jobs
-                scheduler_options=os.environ['PT_BATCHOPTS'],
+                scheduler_options="#SBATCH -L SCRATCH,projecta \n#SBATCH --constraint=knl",
                 worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
                 channel=LocalChannel(),    # batch communication is performed on this local machine
-                launcher=SingleNodeLauncher(),
+                launcher=SingleNodeLauncher()
             ),
         ),
         HighThroughputExecutor(
-            label='cori-2',
-            address=hostName,   # node upon which the top-level parsl script is running
-            cores_per_worker=2,   # threads per user job
-            max_workers=4,           # user jobs/node
+            label='coriH-local',
+            address=hostName,         # node upon which the top-level parsl script is running
+            cores_per_worker=1,
+            max_workers=1,            # user tasks/node
             poll_period=30,
-            provider=SlurmProvider(
-                partition='debug',               # SLURM job "queue"
-                walltime='00:30:00',
-                cmd_timeout=90,                # Extend time waited in response to 'sbatch' command
-                nodes_per_block=1,   # Nodes per batch job
-                init_blocks=0,
-                min_blocks=1,                  # limits on batch job requests
+            provider=LocalProvider(        # Dispatch tasks on local machine only
+                channel=LocalChannel(),
+                init_blocks=1,
                 max_blocks=1,
-                parallelism=0.1,            # reduce "extra" batch jobs
-                scheduler_options="#SBATCH -L SCRATCH,projecta \n#SBATCH --constraint=haswell",
-                worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
-                channel=LocalChannel(),    # batch communication is performed on this local machine
-                launcher=SingleNodeLauncher(),
+                launcher=SrunLauncher(),
+                worker_init=os.environ['PT_ENVSETUP']          # Initial ENV setup
             ),
         )
     ],
@@ -111,33 +115,34 @@ print("config = ",config)
 parsl.load(config)
 print(datetime.datetime.now(), ": Parsl config complete!")
 
-## Define workflow steps
 
 
-@bash_app(executors=['cori-1'])
-def genBFk(cmd, stdout='stdout.log', stderr='stderr.log'):
-    ## Command executor - intended for BF kernel generation
-    import os,sys,datetime
-    print(datetime.datetime.now(),' Entering genBF')
-    return f'{cmd}'
 
-@bash_app(executors=['cori-2'])
+## Define workflow apps
+
+@bash_app(executors=['coriH-local'])
 def genBFh(cmd, stdout='stdout.log', stderr='stderr.log'):
     ## Command executor - intended for BF kernel generation
     import os,sys,datetime
     print(datetime.datetime.now(),' Entering genBF')
     return f'{cmd}'
 
+#@bash_app(executors=['coriK'])
+#def genBFk(cmd, stdout='stdout.log', stderr='stderr.log'):
+#   ## Command executor - intended for BF kernel generation
+#    import os,sys,datetime
+#    print(datetime.datetime.now(),' Entering genBF')
+#    return f'{cmd}'
+
 ## Submit and Run the workflow steps
 print(datetime.datetime.now(), ": Run BF generation")
 
-#/usr/bin/time -v ./genBFkernel.sh   0  39 ${PT_RERUNDIR}1 40 |tee ${PT_RERUNDIR}1.log
-timex = "/usr/bin/time -v "
 
 ## Define list of sensors for which to calculate BF kernel
 sensorList = [27,93,94,187]
+#sensorList = list(range(189))
 
-## Submit parsl job steps
+## Submit parsl job steps ('tasks')
 jobsk = []
 jobsh = []
 njobs = 0
@@ -145,9 +150,9 @@ for sensor in sensorList:
     njobs += 1
     cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(sensor)+" "+os.environ['PT_RERUNDIR']+ " 1"
     print('cmd = ',cmd)
-    stdo = 'Kernel'+str(njobs)+'.log'
-    stde = 'KernelErr'+str(njobs)+'.log'
-    if njobs < 0:
+    stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
+    stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
+    if njobs < 0:          ## All jobs currently go to Haswell
         print("Creating KNL task ",njobs-1)
         jobsk.append(genBFk(cmd,stdout=stdo,stderr=stde))
     else:
@@ -158,20 +163,8 @@ for sensor in sensorList:
 print(" Total number of parsl tasks created = ",njobs)
 
 
-
-
-## Introspect the parsl tasks
-#print("Workflow info:")
-#print("type(parsl) = ",type(parsl))
-#print("dir(parsl) = ",dir(parsl))
-
-#print("type(jobsk[0]) = ",type(jobsk[0]))
-#print("dir(jobsk[0]) = ",dir(jobsk[0]))
-
-
 ## Uncomment the assert if running with "python -i"
 #assert False,"Entering python interpreter"
-
 
 
 ## Wait for jobs to complete
