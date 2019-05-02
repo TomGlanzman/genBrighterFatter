@@ -4,7 +4,7 @@
 
 ## NOTE: a proper DM environment AND repository must first be
 ## established prior to running this script
-
+echo;echo;echo;echo;echo "============================================================";echo
 if [ -z "$SLURMD_NODENAME" ]
 then
     echo `date`"  Entering genBFkernel.sh, running on "${SLURMD_NODENAME}
@@ -47,7 +47,7 @@ echo "[makeBrighterFatterKernel.py]"
 ## set "doCalcGains=False" to use bf gains stored in <repo>/calibrations
 
 set -x
-${Tprefix} python3 ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${visitPairs} -c xcorrCheckRejectLevel=2 doCalcGains=False isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True buildCorrelationModel=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
+${Tprefix} python3 ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${visitPairs} -c xcorrCheckRejectLevel=2 doCalcGains=False isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True correlationModelRadius=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
 rc=$?
 set +x
 echo "[rc = "$rc"]"

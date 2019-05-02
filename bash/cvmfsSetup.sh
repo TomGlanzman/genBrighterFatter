@@ -4,7 +4,7 @@
 ## envrironment within which to run the BF kernel generation code.
 ## Work in progress!
 ## Update: 4/30/2019 to use w_2019_17
-
+## Invisible update: 5/2/2019 - Heather updates cp_pipe to use tickets/DM-18683
 
 export STACKCVMFS=/cvmfs/sw.lsst.eu/linux-x86_64/lsst_distrib
 export LSST_STACK_VERSION=w_2019_17

@@ -5,7 +5,11 @@
 
 cd $PT_WORKFLOWROOT
 /usr/bin/time -v ./genBFkernel.sh   0  39 "${PT_RERUNDIR}.1" 40 |tee block1.log
+echo;echo;echo;echo;echo "++++++++++";echo;echo;echo;echo;echo
 /usr/bin/time -v ./genBFkernel.sh  40  79 "${PT_RERUNDIR}.2" 40 |tee block2.log
+echo;echo;echo;echo;echo "++++++++++";echo;echo;echo;echo;echo
 /usr/bin/time -v ./genBFkernel.sh  80 119 "${PT_RERUNDIR}.3" 40 |tee block3.log
+echo;echo;echo;echo;echo "++++++++++";echo;echo;echo;echo;echo
 /usr/bin/time -v ./genBFkernel.sh 120 159 "${PT_RERUNDIR}.4" 40 |tee block4.log
+echo;echo;echo;echo;echo "++++++++++";echo;echo;echo;echo;echo
 /usr/bin/time -v ./genBFkernel.sh 160 189 "${PT_RERUNDIR}.5" 40 |tee block5.log
