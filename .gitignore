@@ -2,6 +2,10 @@
 *.log
 monitoring.db
 runinfo
+*.gz
+*/obsolete
+*/trash
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
