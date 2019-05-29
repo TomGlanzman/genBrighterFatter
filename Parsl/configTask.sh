@@ -10,17 +10,22 @@
 ## ("ParslTask" or "PipelineTask", take your pick)
 ##
 
+## This script *must* be sourced to have any value!
+if [[ x$BASH_SOURCE =~ x$0 ]]; then
+    echo "You must source this script: $BASH_SOURCE"
+    exit
+fi
+
 ## Needed only until the most recent version of parsl is made part of the DM conda installation
 export PATH="'${PATH}:${HOME}'"/.local/bin
 
-echo "PATH="$PATH
 
-####################################################################
+#####################################################
 ###########  Global variables
-####################################################################
+#####################################################
 
-##     PT_WORKFLOWROOT is where the workflow scripts live
-export PT_WORKFLOWROOT="$(dirname $(realpath $0))"
+##     PT_WORKFLOWROOT is where the workflow scripts live (must be same dir as this config script)
+export PT_WORKFLOWROOT="$(realpath $(dirname $BASH_SOURCE))"
 #echo "PT_WORKFLOWROOT = "$PT_WORKFLOWROOT
 
 export PT_SCRATCH='/global/cscratch1/sd/descdm'
@@ -31,9 +36,9 @@ export PT_OUTPUTDIR=$PT_SCRATCH
 ##      PT_DEBUG is a global flag for workflow development & debugging
 export PT_DEBUG=False
 
-####################################################################
+#####################################################
 ###########  One-time Setup
-####################################################################
+#####################################################
 
 ### The following values are required to establish a working DM-style
 ### repository
@@ -53,9 +58,9 @@ export PT_REPODIR=${PT_OUTPUTDIR}'/tomTest/bf_repoA'
 
 
 
-####################################################################
+###################################################
 ###########  Production running
-####################################################################
+###################################################
 
 ## makeBrighterFatterKernel parameters
 

@@ -11,7 +11,7 @@
 
 ## Define root workflow directory
 ##   Note: this will assume this script resides in the top-level task directory
-workflowroot=$(dirname $(realpath $0))
+workflowroot="$(realpath $(dirname $BASH_SOURCE)"
 echo 'workflowroot= '$workflowroot
 
 ## This is needed if parsl (or some other package) is installed locally

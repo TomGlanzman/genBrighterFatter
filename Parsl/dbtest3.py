@@ -3,6 +3,8 @@
 ## The idea is not to replace the "sqlite3" interactive command, but
 ## to create some useful summaries specific to Parsl workflows.
 
+## T.Glanzman - Spring 2019
+
 import sys,os
 import sqlite3
 from tabulate import tabulate

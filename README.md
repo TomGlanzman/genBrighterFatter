@@ -1,5 +1,45 @@
 # genBrighterFatter
-Workflow to generate LSST brighter-fatter kernels
+Workflows to generate LSST brighter-fatter kernels
+
+There are two branches to this repo: 'bash' is a script-based workflow
+to generate brighter-fatter kernels, while "Parsl" is parsl-based.
+
+
+## bash version
+
+Note: this is intended to be a temporary stop-gap used to validate the
+DM setup and generation of BF kernels, and to create them while the
+parsl version is developed.
+
+Instructions for running the scripts are located in the README.txt file.
+
+Directory structure after a kernel generation run:
+
+|-- README.txt
+|-- bfFlatVisits.txt
+|-- block1.log
+|-- block2.log
+|-- block3.log
+|-- block4.log
+|-- block5.log
+|-- block6.log
+|-- configTask.sh
+|-- cvmfsSetup.sh
+|-- fullFP-1.sh
+|-- fullFP-2.sh
+|-- genBFkernel.sh
+|-- initRepo.log
+|-- initRepo.sh
+|-- oneSensor.sh
+|-- runInit.sh
+|-- single.sh
+|-- single1.log
+
+
+=====================================================
+=====================================================
+=====================================================
+
 
 ## PARSL version
 
@@ -45,7 +85,6 @@ The directory structure looks like this, after two "runs" of the top-level workf
 |-- bfFlatVisits.txt                                      
 |-- configTask.sh                                         
 |-- cvmfsSetup.sh
-|-- genBFkernel.sh
 |-- initRepo.sh
 |-- runInit.sh
 |-- runWorkflow.sh
