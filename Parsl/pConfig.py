@@ -15,6 +15,7 @@ from parsl.launchers  import  SingleNodeLauncher
 from parsl.launchers  import  SrunLauncher
 from parsl.launchers  import  SimpleLauncher
 from parsl.executors  import  HighThroughputExecutor
+from parsl.executors  import  ThreadPoolExecutor
 from parsl.config       import  Config
 
 ## New Parsl monitoring (since v0.7.2)
@@ -78,12 +79,19 @@ coriHlocal = HighThroughputExecutor(
         channel=LocalChannel(),
         init_blocks=1,
         max_blocks=1,
-        launcher=SimpleLauncher(),
-        worker_init=os.environ['PT_ENVSETUP']          # Initial ENV setup
+        worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
     )
 )
 
-
+## This is based on the *default* executor (*DO NOT USE* because this executor is not recommended per Yadu)
+coriLogin=ThreadPoolExecutor(
+    label='coriLogin',
+    managed=True,
+    max_threads=2,
+    storage_access=[],
+    thread_name_prefix='',
+    working_dir=None
+)
 
 ##
 ## Finally, assemble the full Parsl configuration 
@@ -95,7 +103,6 @@ config = Config(
     checkpoint_mode='dfk_exit', 
     checkpoint_period=None, 
     executors=[
-        coriH,
         coriHlocal
     ],
     monitoring=MonitoringHub(
@@ -105,3 +112,5 @@ config = Config(
         resource_monitoring_interval=60,
     ),
 )
+
+

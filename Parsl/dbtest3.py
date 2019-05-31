@@ -3,6 +3,8 @@
 ## The idea is not to replace the "sqlite3" interactive command, but
 ## to create some useful summaries specific to Parsl workflows.
 
+## This version is tracking Parsl 0.8.0a (informal designation)
+
 ## T.Glanzman - Spring 2019
 
 import sys,os
@@ -131,10 +133,10 @@ print('\n\nWorkflow summary\n================\n')
 
 wSummaryList = []
 wSummaryList.append(['Report Date/Time ',repDate ])
-wSummaryList.append(['workflow script',os.path.join(exeDir,row['workflow_name'])])
-wSummaryList.append(['most recent run',runNum ])
-wSummaryList.append(['workflow node', row['host']])
 wSummaryList.append(['user', row['user']])
+wSummaryList.append(['workflow script',os.path.join(exeDir,row['workflow_name'])])
+wSummaryList.append(['workflow node', row['host']])
+wSummaryList.append(['most recent run',runNum ])
 wSummaryList.append(['most recent run start',row['time_began'] ])
 wSummaryList.append(['most recent run end ',row['time_completed'] ])
 wSummaryList.append(['most recent run duration ', str(row['workflow_duration'])+' s'])
@@ -157,7 +159,7 @@ print('\n\nTask summary (most recent run)\n==============================\n')
 ## The task summary is a composite of values from the 'task' and 'status' tables
 
 ## Extract data from 'task' table
-sql = 'select task_id,task_time_submitted,task_time_running,task_time_returned,task_stdout  from task where run_id = "'+row['run_id']+'"'
+sql = 'select task_id,hostname,task_time_submitted,task_time_running,task_time_returned,task_stdout  from task where run_id = "'+row['run_id']+'"'
 (tRowz,tTitles) = stdQuery(cur,sql)
 
 
@@ -170,11 +172,11 @@ for row in tRowz:
 numTasks = len(tRows)
 print('number of Tasks dispatched = ',numTasks)
 
-################# MOCK up 'node' names until it is available in the monitoring.db file
-tTitles.append("node")
-for row in range(numTasks):
-    tRows[row].append("nid00050"+str(row))
-    pass
+# ################# MOCK up 'node' names until it is available in the monitoring.db file
+# tTitles.append("node")
+# for row in range(numTasks):
+#     tRows[row].append("nid00050"+str(row))
+#     pass
 
 
 ## Extract data from 'status' table

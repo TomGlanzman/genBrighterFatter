@@ -43,7 +43,7 @@ Tprefix="/usr/bin/time -v "
 BFoptions=" -j "${nPar}    ## parallelization
 
 detectors=${startDet}".."${endDet}
-echo '$pid detectors = '$detectors
+echo "$pid detectors = "$detectors
 
 
 ## Note that $CP_PIPE_DIR comes from the DM stack setup
@@ -56,7 +56,10 @@ echo "$pid [makeBrighterFatterKernel.py]"
 ## This is the DM code to generate the brighter-fatter kernels
 set -x
 
-${Tprefix} python3 ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${PT_BF_VISITPAIRS} -c xcorrCheckRejectLevel=2 doCalcGains=${PT_BF_DOCALCGAINS} isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True buildCorrelationModel=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
+# ${Tprefix} python ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${PT_BF_VISITPAIRS} -c xcorrCheckRejectLevel=2 doCalcGains=${PT_BF_DOCALCGAINS} isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True buildCorrelationModel=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
+
+## Update 5/30/2019 change buildCorrelationModel to correlationModelRadius
+${Tprefix} python ${BFprefix}/makeBrighterFatterKernel.py "${PT_REPODIR}" --rerun ${dir}  --id detector=${detectors} --visit-pairs ${PT_BF_VISITPAIRS} -c xcorrCheckRejectLevel=2 doCalcGains=True isr.doDark=True isr.doBias=True isr.doCrosstalk=True isr.doDefect=False isr.doLinearize=False forceZeroSum=True correlationModelRadius=3 correlationQuadraticFit=True level=AMP --clobber-config --clobber-versions ${BFoptions}
 
 rc=$?
 set +x

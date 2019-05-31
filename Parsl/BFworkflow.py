@@ -53,9 +53,6 @@ def genBFh(cmd, stdout='stdout.log', stderr='stderr.log'):
 #    return f'{cmd}'
 
 
-print("DEBUG EXIT...")
-sys.exit(0)
-
 
 ##
 ## Submit and Run the workflow steps
@@ -65,7 +62,8 @@ print(datetime.datetime.now(), ": Run BF generation")
 
 
 ## Define list of sensors for which to calculate BF kernel
-sensorList = [27,93,94,187]
+sensorList = [27]
+#sensorList = [27,93,94,187]
 #sensorList = list(range(189))
 
 ## Submit parsl job steps ('tasks')
