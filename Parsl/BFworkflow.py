@@ -38,7 +38,7 @@ print(datetime.datetime.now(), ": Parsl config complete!")
 ## Define Parsl-decorated workflow apps
 ##
 
-@bash_app(executors=['coriHlocal'])
+@bash_app(executors=['coriHinteractive'])
 def genBFh(cmd, stdout='stdout.log', stderr='stderr.log'):
     ## Command executor - intended for BF kernel generation
     import os,sys,datetime
@@ -62,8 +62,8 @@ print(datetime.datetime.now(), ": Run BF generation")
 
 
 ## Define list of sensors for which to calculate BF kernel
-sensorList = [27]
-#sensorList = [27,93,94,187]
+#sensorList = [27]
+sensorList = [0,1,2,3,4,5,27,93,94,187]
 #sensorList = list(range(189))
 
 ## Submit parsl job steps ('tasks')
@@ -78,9 +78,10 @@ for sensor in sensorList:
     stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
     if njobs < 0:          ## All jobs currently go to Haswell
         print("Creating KNL task ",njobs-1)
-        jobsk.append(genBFk(cmd,stdout=stdo,stderr=stde))
+        jobsk.append(genBFk(cmd,stdout=parsl.AUTO_LOGGING,stderr=parsl.AUTO_LOGGING,label='makeBFKk'))
     else:
         print("Creating Haswell task ",njobs-1)
+#        jobsh.append(genBFh(cmd,stdout=parsl.AUTO_LOGGING,stderr=parsl.AUTO_LOGGING,label='makeBFKh'))
         jobsh.append(genBFh(cmd,stdout=stdo,stderr=stde))
         pass
     pass

@@ -68,7 +68,7 @@ coriH = HighThroughputExecutor(
 )
 
 
-## This executor is intended to be used for interactive work on a single node
+## This executor is intended to be used for interactive work on a single login node
 coriHlocal = HighThroughputExecutor(
     label='coriHlocal',
     address=address_by_hostname(),  # node upon which the top-level parsl script is running
@@ -82,8 +82,23 @@ coriHlocal = HighThroughputExecutor(
         worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
     )
 )
+## This executor is intended to be used for interactive work on a single login node
+coriHinteractive = HighThroughputExecutor(
+    label='coriHinteractive',
+    address=address_by_hostname(),  # node upon which the top-level parsl script is running
+    cores_per_worker=1,
+    max_workers=5,                            # user tasks/node
+    poll_period=30,
+    provider=LocalProvider(                 # Dispatch tasks on local machine only
+        channel=LocalChannel(),
+        init_blocks=1,
+        max_blocks=1,
+        worker_init=os.environ['PT_ENVSETUP'],          # Initial ENV setup
+    )
+)
 
-## This is based on the *default* executor (*DO NOT USE* because this executor is not recommended per Yadu)
+## This is based on the *default* executor (*DO NOT USE* because this
+## executor is not recommended by Yadu)
 coriLogin=ThreadPoolExecutor(
     label='coriLogin',
     managed=True,
@@ -93,9 +108,11 @@ coriLogin=ThreadPoolExecutor(
     working_dir=None
 )
 
+
+
 ##
 ## Finally, assemble the full Parsl configuration 
-##
+##   [Be sure to specify your needed executor(s)]
 
 config = Config(
     app_cache=True, 
@@ -103,7 +120,7 @@ config = Config(
     checkpoint_mode='dfk_exit', 
     checkpoint_period=None, 
     executors=[
-        coriHlocal
+        coriHinteractive
     ],
     monitoring=MonitoringHub(
         hub_address=address_by_hostname(),

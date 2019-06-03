@@ -181,12 +181,12 @@ print('number of Tasks dispatched = ',numTasks)
 
 ## Extract data from 'status' table
 
-tTitles.append("status")
+tTitles.insert(1, "status")
 for row in range(numTasks):
     taskID = tRows[row][0]
     sql = 'select task_id,timestamp,task_status_name from status where run_id="'+str(runID)+'" and task_id="'+str(taskID)+'" order by timestamp desc limit 1'
     (sRowz,sTitles) = stdQuery(cur,sql)
-    tRows[row].append(sRowz[0]['task_status_name'])
+    tRows[row].insert(1, sRowz[0]['task_status_name'])
     pass
 
 ## Pretty print task summary table
