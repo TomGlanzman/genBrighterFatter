@@ -1,5 +1,3 @@
-#!/bin/sh
-
 ## cvmfsSetup.sh - from Heather Kelly (3/21/2019) to set up DMstack
 ## envrironment within which to run the BF kernel generation code.
 ## Work in progress!

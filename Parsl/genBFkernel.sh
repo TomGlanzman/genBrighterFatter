@@ -26,6 +26,9 @@ echo;echo;echo
 echo "All environment variables:"
 printenv |sort
 echo "==========================="
+echo "module list"
+module list 2>&1
+echo "==========================="
 echo;echo;echo
 
 
@@ -68,5 +71,5 @@ echo "$pid [rc = "$rc"]"
 
 echo `date`"  $pid Exiting genBFkernel.sh"
  
-
-#exit 
+## Exit with return code
+exit $rc

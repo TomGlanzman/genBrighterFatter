@@ -10,9 +10,16 @@
 ##
 
 import os,sys,datetime
+import traceback
 
 startTime = datetime.datetime.now()
+
+## Say hello
 print(startTime, ": Entering BFworkflow.py")
+print("Running python from: ",sys.prefix)
+print("Python version: ",sys.version)
+
+
 
 #import logging
 
@@ -33,26 +40,23 @@ print("config = ",pConfig.config)
 parsl.load(pConfig.config)
 print(datetime.datetime.now(), ": Parsl config complete!")
 
+#########################################################
+#########################################################
+
 
 ##
 ## Define Parsl-decorated workflow apps
 ##
 
-@bash_app(executors=['coriHinteractive'])
-def genBFh(cmd, stdout='stdout.log', stderr='stderr.log'):
+@bash_app(executors=['coriBatchM'])
+def genBF(cmd, stdout=parsl.AUTO_LOGNAME, stderr=parsl.AUTO_LOGNAME, label=None):
     ## Command executor - intended for BF kernel generation
     import os,sys,datetime
     print(datetime.datetime.now(),' Entering genBF')
     return f'{cmd}'
 
-#@bash_app(executors=['coriK'])
-#def genBFk(cmd, stdout='stdout.log', stderr='stderr.log'):
-#   ## Command executor - intended for BF kernel generation
-#    import os,sys,datetime
-#    print(datetime.datetime.now(),' Entering genBF')
-#    return f'{cmd}'
-
-
+#########################################################
+#########################################################
 
 ##
 ## Submit and Run the workflow steps
@@ -63,8 +67,8 @@ print(datetime.datetime.now(), ": Run BF generation")
 
 ## Define list of sensors for which to calculate BF kernel
 #sensorList = [27]
-sensorList = [0,1,2,3,4,5,27,93,94,187]
-#sensorList = list(range(189))
+#sensorList = [0,1,2,3,4,5,27,93,94,187]
+sensorList = list(range(189))
 
 ## Submit parsl job steps ('tasks')
 jobsk = []
@@ -76,17 +80,13 @@ for sensor in sensorList:
     print('cmd = ',cmd)
     stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
     stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
-    if njobs < 0:          ## All jobs currently go to Haswell
-        print("Creating KNL task ",njobs-1)
-        jobsk.append(genBFk(cmd,stdout=parsl.AUTO_LOGGING,stderr=parsl.AUTO_LOGGING,label='makeBFKk'))
-    else:
-        print("Creating Haswell task ",njobs-1)
-#        jobsh.append(genBFh(cmd,stdout=parsl.AUTO_LOGGING,stderr=parsl.AUTO_LOGGING,label='makeBFKh'))
-        jobsh.append(genBFh(cmd,stdout=stdo,stderr=stde))
-        pass
+    print("Creating parsl task ",njobs-1)
+    jobsk.append(genBF(cmd,label='makeBF'))
     pass
 print(" Total number of parsl tasks created = ",njobs)
 
+#########################################################
+#########################################################
 
 ## Uncomment the assert if running with "python -i"
 #assert False,"Entering python interpreter"
@@ -116,8 +116,12 @@ try:
         print("rc = ",job.result())
         jobn += 1
         pass
-except:
+except Exception as ex:
     print("Exception waiting for job ",jobn)
+    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+    message = template.format(type(ex).__name__, ex.args)
+    print(message)
+    print(traceback.format_exc())
     pass
 
 
