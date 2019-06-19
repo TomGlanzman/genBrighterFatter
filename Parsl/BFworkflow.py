@@ -12,6 +12,11 @@
 import os,sys,datetime
 import traceback
 
+def checkConsecutive(l):
+    # Check if list of sensors is consecutive (for parallelization)
+    return sorted(l) == list(range(min(l), max(l)+1))
+
+
 startTime = datetime.datetime.now()
 
 ## Say hello
@@ -70,19 +75,46 @@ print(datetime.datetime.now(), ": Run BF generation")
 #sensorList = [0,1,2,3,4,5,27,93,94,187]
 sensorList = list(range(189))
 
-## Submit parsl job steps ('tasks')
+pmax=int(os.environ['PT_PARALLEL_MAX'])     # number of sensors to process in parallel
+
+
+## Submit parsl tasks (aka 'job steps')
 jobsk = []
 jobsh = []
 njobs = 0
-for sensor in sensorList:
-    njobs += 1
-    cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(sensor)+" "+os.environ['PT_RERUNDIR']+ " 1"
-    print('cmd = ',cmd)
-    stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
-    stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
-    print("Creating parsl task ",njobs-1)
-    jobsk.append(genBF(cmd,label='makeBF'))
+
+if pmax > 0 and checkConsecutive(sensorList):
+
+    print("This workflow can be parallelized; up to ",pmax," sensors/job")
+    jobList = list(range(min(sensorList),max(sensorList)+1,pmax))
+    print("jobList = ",jobList)
+    for sensor in jobList:
+        endSensor = sensor + pmax - 1   # calc last sensor in range
+        if endSensor > max(sensorList): endSensor = max(sensorList) # but cannot go beyond end
+        print('startSensor = ',sensor,', endSensor = ',endSensor)
+        njobs += 1
+        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(endSensor)+" "+os.environ['PT_RERUNDIR']+ " "+str(pmax)
+        print('cmd = ',cmd)
+        stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
+        stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
+        print("Creating parsl task ",njobs-1)
+        jobsk.append(genBF(cmd,label='make1BF'))
+        pass
+
+else:
+
+    print("This workflow cannot be parallelized; only one sensor/job")
+    for sensor in sensorList:
+        njobs += 1
+        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(sensor)+" "+os.environ['PT_RERUNDIR']+ " "+str(pmax)
+        print('cmd = ',cmd)
+        stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
+        stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
+        print("Creating parsl task ",njobs-1)
+        jobsk.append(genBF(cmd,label='makeMBF'))
+        pass
     pass
+
 print(" Total number of parsl tasks created = ",njobs)
 
 #########################################################
@@ -105,6 +137,7 @@ pass
 print("Check return code for each task")
 ### Can the .result() function also cause an exception???
 jobn = 0
+rc = 0
 try:
     for job in jobsh:
         print("waiting for Haswell job ",jobn)
@@ -122,6 +155,7 @@ except Exception as ex:
     message = template.format(type(ex).__name__, ex.args)
     print(message)
     print(traceback.format_exc())
+    rc = 1
     pass
 
 
@@ -132,7 +166,7 @@ elapsedTime = endTime-startTime
 print("Time to complete BF generation = ",elapsedTime)
 print(endTime,": Exiting BFworkflow")
 
-#sys.exit()
+sys.exit(rc)
 
 
 

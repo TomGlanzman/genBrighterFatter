@@ -6,7 +6,7 @@
 ## This version is tracking Parsl 0.8.0a
 
 ## T.Glanzman - Spring 2019
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 pVersion='0.8.0a'
 
 import sys,os
@@ -39,6 +39,14 @@ class pmon:
         ## This alternate query returns a list of one 'row' containing the most recent entry
         #sql = "select * from workflow order by time_began desc limit 1"
         (self.wrows,self.wtitles) = self.stdQuery(sql)
+        self.runid2num = {}
+        self.runnum2id = {}
+        for row in self.wrows:
+            runID = row['run_id']
+            runNum = os.path.basename(row['rundir'])
+            self.runid2num[runID] = runNum
+            self.runnum2id[int(runNum)] = runID
+            pass
         return
 
 
@@ -126,12 +134,19 @@ class pmon:
         return
 
 
-    def printTaskSummary(self):
+    def printTaskSummary(self,runnum=None):
         ## The task summary is a composite of values from the 'task' and 'status' tables
-        print('\n\nTask summary (*most recent run*)\n================================\n')
 
         ## Extract data from 'task' table
-        row = self.wrows[-1]
+        if runnum == None:
+            row = self.wrows[-1]
+            runNum = self.runid2num[row[0]]
+            print('\n\nTask summary for run ',runNum,'\n================================\n')
+        else:
+            row = self.wrows[0]
+            print('\n\nTask summary for run ',runnum,'\n================================\n')
+            pass
+
         runID = row['run_id']
         sql = 'select task_id,hostname,task_time_submitted,task_time_running,task_time_returned,task_stdout  from task where run_id = "'+row['run_id']+'"'
         (tRowz,tTitles) = self.stdQuery(sql)
@@ -143,7 +158,7 @@ class pmon:
             pass
 
         numTasks = len(tRows)
-        print('number of Tasks dispatched = ',numTasks)
+        print('number of Tasks launched = ',numTasks)
 
         ## Extract data from 'status' table
         tTitles.insert(1, "status")
@@ -159,10 +174,10 @@ class pmon:
         return
 
 
-    def standardSummary(self):
+    def standardSummary(self,runnum=None):
         ## This is the standard summary: workflow summary + summary of tasks in current run
         self.printWorkflowSummary()
-        self.printTaskSummary()
+        self.printTaskSummary(runnum)
         return
 
     def shortSummary(self):
@@ -172,7 +187,7 @@ class pmon:
 
     def workflowHistory(self):
         ## This is the workflowHistory: details for each workflow 'run'
-        sql = 'select workflow_name,user,host,time_began,time_completed,tasks_completed_count,tasks_failed_count,rundir from workflow'
+        sql = 'select workflow_name,user,host,time_began,time_completed,workflow_duration,tasks_completed_count,tasks_failed_count,rundir from workflow'
         (wrows,wtitles) = self.stdQuery(sql)
         ## Modify the result set
         for i in list(range(len(wtitles))):
@@ -184,7 +199,7 @@ class pmon:
         for wrow in wrows:
             row = list(wrow)
             if row[4] is None: row[4] = '-> running or killed <-'
-            row.insert(0,os.path.basename(row[7]))
+            row.insert(0,os.path.basename(row[8]))
             rows.append(row)
         ## Print the report
         print(tabulate(rows,headers=wtitles, tablefmt="psql"))
@@ -207,6 +222,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A simple Parsl status reporter.  Available reports include:'+str(reportTypes))
     parser.add_argument('reportType',help='Type of report to display (default=%(default)s)',nargs='?',default='standardSummary')
     parser.add_argument('-f','--file',default='monitoring.db',help='name of Parsl monitoring database file (default=%(default)s)')
+    parser.add_argument('-r','--runnum',help='Specific run number of interest (default = latest)')
     parser.add_argument('-s','--schemas',action='store_true',default=False,help="only print out monitoring db schema for all tables")
     parser.add_argument('-v','--version', action='version', version=__version__)
     args = parser.parse_args()
@@ -231,8 +247,9 @@ if __name__ == '__main__':
 
     ## Print out requested report
     if args.reportType not in reportTypes: sys.exit(1)
+
     if args.reportType == 'standardSummary':
-        m.standardSummary()
+        m.standardSummary(runnum=args.runnum)
     if args.reportType == 'shortSummary':
         m.shortSummary()
     if args.reportType == 'workflowHistory':
