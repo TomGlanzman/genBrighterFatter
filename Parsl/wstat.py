@@ -1,12 +1,15 @@
 ## wstat.py - workflow status summary from Parsl monitoring database
 
-## The idea is not to replace the "sqlite3" interactive command, but
-## to create some useful summaries specific to Parsl workflows.
+## The idea is not to replace the "sqlite3" interactive command or the
+## Parsl web interface, but to complement them to create some useful
+## interactive summaries specific to Parsl workflows.
+
+## Python dependencies: sqlite3, tabulate
 
 ## This version is tracking Parsl 0.8.0a
 
 ## T.Glanzman - Spring 2019
-__version__ = "0.7.2"
+__version__ = "0.8.0"
 pVersion='0.8.0a'
 
 import sys,os
@@ -21,11 +24,20 @@ class pmon:
         ## Instance variables
         self.dbfile = dbfile
 
-        ## Prepare data 
+        ## sqlite3 database connection and cursor
         self.con = sqlite3.connect(self.dbfile)      ## connect to sqlite3 file
         self.con.row_factory = sqlite3.Row           ## optimize output format
         self.cur = self.con.cursor()                       ## create a 'cursor'
-        self.readWorkflowTable()                          ## read the workflow table
+
+        ## Read in the workflow (summary) table
+        self.wrows = None
+        self.wtitles = None
+        self.runid2num = None
+        self.runnum2id = None
+        self.numRuns = 0
+        self.runmin = 999999999
+        self.runmax = -1
+        self.readWorkflowTable()
         return
 
 
@@ -36,6 +48,10 @@ class pmon:
 
     def readWorkflowTable(self,sql="select * from workflow"):
         ## Extract all rows from 'workflow' table
+        ## workflow table:  ['run_id', 'workflow_name', 'workflow_version', 'time_began', 
+        ##                           'time_completed', 'workflow_duration', 'host', 'user', 'rundir', 
+        ##                           'tasks_failed_count', 'tasks_completed_count']
+        ##
         ## This alternate query returns a list of one 'row' containing the most recent entry
         #sql = "select * from workflow order by time_began desc limit 1"
         (self.wrows,self.wtitles) = self.stdQuery(sql)
@@ -46,7 +62,14 @@ class pmon:
             runNum = os.path.basename(row['rundir'])
             self.runid2num[runID] = runNum
             self.runnum2id[int(runNum)] = runID
+            if int(runNum) > self.runmax: self.runmax = int(runNum)
+            if int(runNum) < self.runmin: self.runmin = int(runNum)
             pass
+        self.numRuns = len(self.wrows)
+        # print('runid2num = ',self.runid2num)
+        # print('runnum2id = ',self.runnum2id)
+        # print('runmin = ',self.runmin)
+        # print('runmax = ',self.runmax)
         return
 
 
@@ -96,17 +119,32 @@ class pmon:
         return (rows,titles)
 
 
-    def printWorkflowSummary(self):
+    def selectRunID(self,runnum=None):
+        ## Select the workflow table row based on the requested runNumber (not to be confused with run_id)
+
+        if runnum == None:         # Select most recent workflow run
+            #print("runnum = None, returning -1")
+            return -1
+        else:
+            for rdx in list(range(len(self.wrows))):
+                if self.wrows[rdx]['run_id'] == self.runnum2id[runnum]:
+                    #print("runnum = ",runnum,', workflow table row = ',rdx)
+                    return rdx
+                pass
+            assert False,"Help!"
+            pass
+        pass
+
+
+    def printWorkflowSummary(self,runnum=None):
         ## Summarize current state of workflow
-        ## workflow table:  ['run_id', 'workflow_name', 'workflow_version', 'time_began', 
-        ##                           'time_completed', 'workflow_duration', 'host', 'user', 'rundir', 
-        ##                           'tasks_failed_count', 'tasks_completed_count']
         repDate = datetime.datetime.now()
-        rows = self.wrows
         titles = self.wtitles
 
-        nRuns = len(rows)
-        row = rows[-1]                    # Grab the last row in the workflow table == most recent run
+        ##  Select desired workflow 'run'
+        nRuns = self.numRuns
+        rowindex = self.selectRunID(runnum)
+        row = self.wrows[rowindex]
 
         runNum = os.path.basename(row['rundir'])
         irunNum = int(runNum)
@@ -116,7 +154,7 @@ class pmon:
         completedTasks = row['tasks_completed_count']+row['tasks_failed_count']
 
         ##   Print SUMMARIES
-        print('Workflow summary\n================\n')
+        print('Workflow summary\n================')
         wSummaryList = []
         wSummaryList.append(['Report Date/Time ',repDate ])
         wSummaryList.append(['user', row['user']])
@@ -132,35 +170,46 @@ class pmon:
         wSummaryList.append(['tasks completed: failed',row['tasks_failed_count'] ])
         print(tabulate(wSummaryList, tablefmt="grid"))
         return
+        
+
 
 
     def printTaskSummary(self,runnum=None):
         ## The task summary is a composite of values from the 'task' and 'status' tables
 
-        ## Extract data from 'task' table
-        if runnum == None:
-            row = self.wrows[-1]
-            runNum = self.runid2num[row[0]]
-            print('\n\nTask summary for run ',runNum,'\n================================\n')
-        else:
-            row = self.wrows[0]
-            print('\n\nTask summary for run ',runnum,'\n================================\n')
-            pass
+        ##  Select requested Run in workflow table
+        rowindex = self.selectRunID(runnum)
+        wrow = self.wrows[rowindex]
+        if runnum == None: runnum = int(self.runid2num[wrow['run_id']])
 
-        runID = row['run_id']
-        sql = 'select task_id,hostname,task_time_submitted,task_time_running,task_time_returned,task_stdout  from task where run_id = "'+row['run_id']+'"'
+        ##  Header
+        header = '\n\nTask summary for run '+str(runnum)
+        if runnum == int(self.runmax):header += ' [most current run]'
+        print(header,'\n===========================================')
+
+        ##  Query the 'task' table
+        runID = wrow['run_id']
+        sql = 'select task_id,hostname,task_time_submitted,task_time_running,task_time_returned,task_stdout  from task where run_id = "'+wrow['run_id']+'"'
         (tRowz,tTitles) = self.stdQuery(sql)
 
         ## Convert from sqlite3.Row to a simple 'list'
         tRows = []
-        for row in tRowz:
-            tRows.append(list(row))
+        for rw in tRowz:
+            tRows.append(list(rw))
             pass
 
+        ## Begin to print summary
         numTasks = len(tRows)
+        duration = self.wrows[rowindex]['workflow_duration']
+        if duration == None:
+            print('workflow script is either still running or was killed')
+        else:
+            print('workflow duration = ',duration,' (sec)')
+            pass
         print('number of Tasks launched = ',numTasks)
+        if numTasks == 0:return
 
-        ## Extract data from 'status' table
+        ## Extract status data from 'status' table
         tTitles.insert(1, "status")
         for row in range(numTasks):
             taskID = tRows[row][0]
@@ -174,16 +223,18 @@ class pmon:
         return
 
 
-    def standardSummary(self,runnum=None):
+    def fullSummary(self,runnum=None):
         ## This is the standard summary: workflow summary + summary of tasks in current run
-        self.printWorkflowSummary()
+        self.printWorkflowSummary(runnum)
         self.printTaskSummary(runnum)
         return
 
-    def shortSummary(self):
+
+    def shortSummary(self,runnum=None):
         ## This is the short summary:
-        self.printWorkflowSummary()
+        self.printWorkflowSummary(runnum)
         return
+
 
     def workflowHistory(self):
         ## This is the workflowHistory: details for each workflow 'run'
@@ -216,13 +267,13 @@ class pmon:
 if __name__ == '__main__':
 
 
-    reportTypes = ['standardSummary','shortSummary','workflowHistory']
+    reportTypes = ['fullSummary','shortSummary','workflowHistory']
 
     ## Parse command line arguments
     parser = argparse.ArgumentParser(description='A simple Parsl status reporter.  Available reports include:'+str(reportTypes))
-    parser.add_argument('reportType',help='Type of report to display (default=%(default)s)',nargs='?',default='standardSummary')
+    parser.add_argument('reportType',help='Type of report to display (default=%(default)s)',nargs='?',default='fullSummary')
     parser.add_argument('-f','--file',default='monitoring.db',help='name of Parsl monitoring database file (default=%(default)s)')
-    parser.add_argument('-r','--runnum',help='Specific run number of interest (default = latest)')
+    parser.add_argument('-r','--runnum',type=int,help='Specific run number of interest (default = latest)')
     parser.add_argument('-s','--schemas',action='store_true',default=False,help="only print out monitoring db schema for all tables")
     parser.add_argument('-v','--version', action='version', version=__version__)
     args = parser.parse_args()
@@ -230,7 +281,7 @@ if __name__ == '__main__':
     print('\nwstat (version ',__version__,', written for Parsl version '+pVersion+')\n')
 
     ## Create a Parsl Monitor object
-    m = pmon()
+    m = pmon(dbfile=args.file)
 
     ## Print out table schemas only
     if args.schemas:
@@ -245,13 +296,18 @@ if __name__ == '__main__':
             pass
         sys.exit()
 
+    ## Check validity of run number
+    if not args.runnum == None and (int(args.runnum) > m.runmax or int(args.runnum) < m.runmin):
+        print('%ERROR: Requested run number, ',args.runnum,' is out of range (',m.runmin,'-',m.runmax,')')
+        sys.exit(1)
+        
     ## Print out requested report
     if args.reportType not in reportTypes: sys.exit(1)
 
-    if args.reportType == 'standardSummary':
-        m.standardSummary(runnum=args.runnum)
+    if args.reportType == 'fullSummary':
+        m.fullSummary(runnum=args.runnum)
     if args.reportType == 'shortSummary':
-        m.shortSummary()
+        m.shortSummary(runnum=args.runnum)
     if args.reportType == 'workflowHistory':
         m.workflowHistory()
  
