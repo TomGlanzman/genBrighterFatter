@@ -157,14 +157,14 @@ class pmon:
         print('Workflow summary\n================')
         wSummaryList = []
         wSummaryList.append(['Report Date/Time ',repDate ])
+        wSummaryList.append(['run',runNum ])
         wSummaryList.append(['user', row['user']])
         wSummaryList.append(['MonitorDB',self.dbfile])
         wSummaryList.append(['workflow script',os.path.join(exeDir,row['workflow_name'])])
         wSummaryList.append(['workflow node', row['host']])
-        wSummaryList.append(['most recent run',runNum ])
-        wSummaryList.append(['most recent run start',row['time_began'] ])
-        wSummaryList.append(['most recent run end ',row['time_completed'] ])
-        wSummaryList.append(['most recent run duration ', str(row['workflow_duration'])+' s'])
+        wSummaryList.append(['run start',row['time_began'] ])
+        wSummaryList.append(['run end ',row['time_completed'] ])
+        wSummaryList.append(['run duration ', str(row['workflow_duration'])+' s'])
         wSummaryList.append(['tasks completed',completedTasks ])
         wSummaryList.append(['tasks completed: success', row['tasks_completed_count']])
         wSummaryList.append(['tasks completed: failed',row['tasks_failed_count'] ])
@@ -200,7 +200,7 @@ class pmon:
 
         ## Begin to print summary
         numTasks = len(tRows)
-        duration = self.wrows[rowindex]['workflow_duration']
+        duration = wrow['workflow_duration']
         if duration == None:
             print('workflow script is either still running or was killed')
         else:
