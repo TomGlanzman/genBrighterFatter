@@ -1,1 +1,0 @@
-python dbtest2.py;sqs|grep -E 'JOBID|parsl.auto|descdm'
