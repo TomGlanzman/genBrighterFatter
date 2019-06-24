@@ -98,7 +98,7 @@ if pmax > 0 and checkConsecutive(sensorList):
         stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
         stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
         print("Creating parsl task ",njobs-1)
-        jobsk.append(genBF(cmd,label='make1BF'))
+        jobsk.append(genBF(cmd,label='makeMBF'))
         pass
 
 else:

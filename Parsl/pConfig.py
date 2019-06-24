@@ -141,7 +141,7 @@ coriHinteractive = HighThroughputExecutor(
     )
 )
 
-## This is based on the *default* executor (*DO NOT USE* because this
+## This is based on the *default* executor (*DO NOT USE* due to this
 ## executor is not recommended by Yadu)
 coriLogin=ThreadPoolExecutor(
     label='coriLogin',

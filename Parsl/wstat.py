@@ -9,7 +9,7 @@
 ## This version is tracking Parsl 0.8.0a
 
 ## T.Glanzman - Spring 2019
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 pVersion='0.8.0a'
 
 import sys,os
@@ -147,7 +147,9 @@ class pmon:
         row = self.wrows[rowindex]
 
         runNum = os.path.basename(row['rundir'])
+        runNumTxt = runNum
         irunNum = int(runNum)
+        if irunNum == int(self.runmax):runNumTxt += '    <<-most current run->>'
         runID = row['run_id']
         exeDir = os.path.dirname(os.path.dirname(row['rundir']))
 
@@ -157,14 +159,14 @@ class pmon:
         print('Workflow summary\n================')
         wSummaryList = []
         wSummaryList.append(['Report Date/Time ',repDate ])
-        wSummaryList.append(['run',runNum ])
+        wSummaryList.append(['run',runNumTxt ])
         wSummaryList.append(['user', row['user']])
         wSummaryList.append(['MonitorDB',self.dbfile])
         wSummaryList.append(['workflow script',os.path.join(exeDir,row['workflow_name'])])
         wSummaryList.append(['workflow node', row['host']])
         wSummaryList.append(['run start',row['time_began'] ])
         wSummaryList.append(['run end ',row['time_completed'] ])
-        wSummaryList.append(['run duration ', str(row['workflow_duration'])+' s'])
+        wSummaryList.append(['run duration ', str(row['workflow_duration'])+' (sec)'])
         wSummaryList.append(['tasks completed',completedTasks ])
         wSummaryList.append(['tasks completed: success', row['tasks_completed_count']])
         wSummaryList.append(['tasks completed: failed',row['tasks_failed_count'] ])
@@ -174,7 +176,7 @@ class pmon:
 
 
 
-    def printTaskSummary(self,runnum=None):
+    def printTaskSummary(self,runnum=None,opt=None):
         ## The task summary is a composite of values from the 'task' and 'status' tables
 
         ##  Select requested Run in workflow table
@@ -198,7 +200,7 @@ class pmon:
             tRows.append(list(rw))
             pass
 
-        ## Begin to print summary
+        ## Construct summary
         numTasks = len(tRows)
         duration = wrow['workflow_duration']
         if duration == None:
@@ -206,20 +208,35 @@ class pmon:
         else:
             print('workflow duration = ',duration,' (sec)')
             pass
-        print('number of Tasks launched = ',numTasks)
-        if numTasks == 0:return
+            print('number of Tasks launched = ',numTasks)
+            if numTasks == 0:return
 
         ## Extract status data from 'status' table
         tTitles.insert(1, "status")
+        tStat = {'launched':0,'running':0,'done':0,'failed':0}
         for row in range(numTasks):
             taskID = tRows[row][0]
             sql = 'select task_id,timestamp,task_status_name from status where run_id="'+str(runID)+'" and task_id="'+str(taskID)+'" order by timestamp desc limit 1'
             (sRowz,sTitles) = self.stdQuery(sql)
             tRows[row].insert(1, sRowz[0]['task_status_name'])
+            tStat[sRowz[0]['task_status_name']] += 1
             pass
 
-        ## Pretty print task summary table
-        print(tabulate(tRows,headers=tTitles,tablefmt="grid"))
+
+
+        ## Pretty print task summary
+
+        if opt == None:                 ## "Full" task summary
+            print(tabulate(tRows,headers=tTitles,tablefmt="grid"))
+        elif opt == "short":            ## "Short" task summary
+            sSum = []
+            for stat in tStat:
+                sSum.append([stat,tStat[stat]])
+            sSum.append(['total tasks',str(numTasks)])
+            print(tabulate(sSum,['State','#'],tablefmt='grid'))
+            pass
+
+
         return
 
 
@@ -233,6 +250,7 @@ class pmon:
     def shortSummary(self,runnum=None):
         ## This is the short summary:
         self.printWorkflowSummary(runnum)
+        self.printTaskSummary(runnum,opt='short')
         return
 
 
@@ -278,7 +296,7 @@ if __name__ == '__main__':
     parser.add_argument('-v','--version', action='version', version=__version__)
     args = parser.parse_args()
 
-    print('\nwstat (version ',__version__,', written for Parsl version '+pVersion+')\n')
+    print('\nwstat - Parsl workflow status (version ',__version__,', written for Parsl version '+pVersion+')\n')
 
     ## Create a Parsl Monitor object
     m = pmon(dbfile=args.file)
