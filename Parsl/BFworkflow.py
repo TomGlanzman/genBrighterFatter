@@ -45,20 +45,26 @@ print("config = ",pConfig.config)
 parsl.load(pConfig.config)
 print(datetime.datetime.now(), ": Parsl config complete!")
 
+
+
 #########################################################
 #########################################################
 
 
+
 ##
-## Define Parsl-decorated workflow apps
+## Define Generic Parsl-decorated workflow (bash) app
+##    (one instance of calling this app generates one user 'task')
 ##
 
-@bash_app(executors=['coriBatchM'])
+@bash_app(executors=['knlMj'],cache=True)
 def genBF(cmd, stdout=parsl.AUTO_LOGNAME, stderr=parsl.AUTO_LOGNAME, label=None):
     ## Command executor - intended for BF kernel generation
     import os,sys,datetime
     print(datetime.datetime.now(),' Entering genBF')
     return f'{cmd}'
+
+
 
 #########################################################
 #########################################################
@@ -70,10 +76,26 @@ def genBF(cmd, stdout=parsl.AUTO_LOGNAME, stderr=parsl.AUTO_LOGNAME, label=None)
 print(datetime.datetime.now(), ": Run BF generation")
 
 
+## Seeding run (initialize the rerun/<label>/config directory)
+##  Basically run the generator with *no* sensors specified
+rerundir = os.environ['PT_RERUNDIR']
+cmd = workflowRoot+"/genBFkernel.sh -1 0 "+rerundir+" 0"
+print("Running 'seed' script to populate the rerun config directory")
+print(cmd)
+rc = os.system(cmd)
+print("Return code = ",rc)
+if rc != 0:
+    print("%ERROR: Failure to initialize (seed) the repo config directory")
+    sys.exit(1)
+    pass
+configdir = os.path.join(os.environ['PT_REPODIR'],'rerun',rerundir,'config')
+print("Contents of ",configdir)
+os.system("ls -l "+configdir)
+
 ## Define list of sensors for which to calculate BF kernel
 #sensorList = [27]
 #sensorList = [0,1,2,3,4,5,27,93,94,187]
-sensorList = list(range(189))
+sensorList = list(range(189))   # Full set of sensors
 
 pmax=int(os.environ['PT_PARALLEL_MAX'])     # number of sensors to process in parallel
 
@@ -85,33 +107,35 @@ njobs = 0
 
 if pmax > 0 and checkConsecutive(sensorList):
 
-    print("This workflow can be parallelized; up to ",pmax," sensors/job")
+    print("This workflow can be DM-parallelized; up to ",pmax," sensors/job")
     jobList = list(range(min(sensorList),max(sensorList)+1,pmax))
     print("jobList = ",jobList)
     for sensor in jobList:
         endSensor = sensor + pmax - 1   # calc last sensor in range
         if endSensor > max(sensorList): endSensor = max(sensorList) # but cannot go beyond end
         print('startSensor = ',sensor,', endSensor = ',endSensor)
-        njobs += 1
-        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(endSensor)+" "+os.environ['PT_RERUNDIR']+ " "+str(pmax)
+        ##UNNECESSARY?##rerundir = os.environ['PT_RERUNDIR']+'.'+str(njobs)
+        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(endSensor)+" "+rerundir+ " "+str(pmax)
         print('cmd = ',cmd)
         stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
         stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
         print("Creating parsl task ",njobs-1)
-        jobsk.append(genBF(cmd,label='makeMBF'))
+        jobsk.append(genBF(cmd,label='makeMBF'))     # add new Parsl task to list
+        njobs += 1
         pass
 
 else:
 
-    print("This workflow cannot be parallelized; only one sensor/job")
+    print("This workflow cannot be DM-parallelized; only one sensor/job")
     for sensor in sensorList:
-        njobs += 1
-        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(sensor)+" "+os.environ['PT_RERUNDIR']+ " "+str(pmax)
+        ##UNNECESSARY?##rerundir = os.environ['PT_RERUNDIR']+'.'+str(njobs)
+        cmd = workflowRoot+"/genBFkernel.sh "+str(sensor)+" "+str(sensor)+" "+rerundir+ " "+str(pmax)
         print('cmd = ',cmd)
         stdo = os.path.join(workflowRoot,'Kernel'+str(njobs)+'.log')
         stde = os.path.join(workflowRoot,'KernelErr'+str(njobs)+'.log')
         print("Creating parsl task ",njobs-1)
-        jobsk.append(genBF(cmd,label='makeMBF'))
+        jobsk.append(genBF(cmd,label='makeMBF'))     # add new Parsl task to list
+        njobs += 1
         pass
     pass
 

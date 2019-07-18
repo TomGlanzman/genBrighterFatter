@@ -6,11 +6,9 @@
 
 ## Python dependencies: sqlite3, tabulate
 
-## This version is tracking Parsl 0.8.0a
-
 ## T.Glanzman - Spring 2019
-__version__ = "0.8.1"
-pVersion='0.8.0a'
+__version__ = "0.8.2"
+pVersion='0.8.0'    ## Parsl version
 
 import sys,os
 import sqlite3
@@ -45,6 +43,9 @@ class pmon:
         ## Class destructor 
         self.con.close()
 
+    def stripms(self,intime):
+        ## Trivial function to strip off millisec from Parsl time string
+        return datetime.datetime.strptime(str(intime),'%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S')
 
     def readWorkflowTable(self,sql="select * from workflow"):
         ## Extract all rows from 'workflow' table
@@ -155,6 +156,30 @@ class pmon:
 
         completedTasks = row['tasks_completed_count']+row['tasks_failed_count']
 
+        runStart = row['time_began']
+        if runStart == None:
+            runStart = '---'
+        else:
+            runStart = self.stripms(runStart)
+#            runStart = datetime.datetime.strptime(str(runStart),'%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S')
+            pass
+
+        runEnd   = row['time_completed']
+        print('runEnd [',type(runEnd),'] = ',runEnd)
+        if runEnd == None:
+            runEnd = '---'
+        else:
+            runEnd   = datetime.datetime.strptime(str(runEnd),'%Y-%m-%d %H:%M:%S.%f').strftime('%Y-%m-%d %H:%M:%S')
+            pass
+        
+        duration = row['workflow_duration']
+        if duration == None:
+            duration = "---"
+        else:
+            duration = datetime.timedelta(seconds=int(row['workflow_duration']))
+            pass
+
+
         ##   Print SUMMARIES
         print('Workflow summary\n================')
         wSummaryList = []
@@ -164,9 +189,9 @@ class pmon:
         wSummaryList.append(['MonitorDB',self.dbfile])
         wSummaryList.append(['workflow script',os.path.join(exeDir,row['workflow_name'])])
         wSummaryList.append(['workflow node', row['host']])
-        wSummaryList.append(['run start',row['time_began'] ])
-        wSummaryList.append(['run end ',row['time_completed'] ])
-        wSummaryList.append(['run duration ', str(row['workflow_duration'])+' (sec)'])
+        wSummaryList.append(['run start',runStart ])
+        wSummaryList.append(['run end ',runEnd ])
+        wSummaryList.append(['run duration ', duration])
         wSummaryList.append(['tasks completed',completedTasks ])
         wSummaryList.append(['tasks completed: success', row['tasks_completed_count']])
         wSummaryList.append(['tasks completed: failed',row['tasks_failed_count'] ])
@@ -196,20 +221,27 @@ class pmon:
 
         ## Convert from sqlite3.Row to a simple 'list'
         tRows = []
+        logDir = os.path.dirname(tRowz[0]['task_stdout'])
+        stdoutIndx = tTitles.index('task_stdout')
+
         for rw in tRowz:
             tRows.append(list(rw))
+            tRows[-1][5] = os.path.basename(tRows[-1][5])
             pass
 
+        #foo = self.stripms(
+
         ## Construct summary
+
         numTasks = len(tRows)
         duration = wrow['workflow_duration']
         if duration == None:
-            print('workflow script is either still running or was killed')
+            print('workflow script is either: running, crashed, or killed')
         else:
             print('workflow duration = ',duration,' (sec)')
-            pass
             print('number of Tasks launched = ',numTasks)
             if numTasks == 0:return
+            pass
 
         ## Extract status data from 'status' table
         tTitles.insert(1, "status")
@@ -228,6 +260,7 @@ class pmon:
 
         if opt == None:                 ## "Full" task summary
             print(tabulate(tRows,headers=tTitles,tablefmt="grid"))
+            print('log file directory: ',logDir)
         elif opt == "short":            ## "Short" task summary
             sSum = []
             for stat in tStat:
